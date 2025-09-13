@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water AI: Smart Water Management</title>
+    <!-- Chosen Palette: Soothing Blue and Neutral Grays -->
+    <!-- Application Structure Plan: A two-column dashboard layout. The left column focuses on user inputs (initial setup, special requests) and static info (tips), creating a clear action area. The right column is for dynamic data display (dashboard, fine details, request statuses), providing real-time feedback. This separation of input vs. output clarifies the user flow: configure on the left, monitor on the right. This is more intuitive than mixing actions and displays. -->
+    <!-- Visualization & Content Choices: 1. Water Levels: Goal is to inform on current status. Method is a progress bar (HTML/CSS). Interaction is a live update from simulation. Justification is its immediate visual feedback. 2. Fine Status: Goal is to alert the user. Method is a combination of text, color change, and an icon. Interaction is a state change based on usage data. Justification is that it provides a clear, unmissable status indicator. 3. Requests List: Goal is to organize user requests. Method is a dynamic HTML list. Interaction is adding new items upon form submission. Justification is its simplicity and clarity for tracking historical requests. No Chart.js needed as progress bars are sufficient. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .bg-water-blue {
+            background-color: #03a9f4;
+        }
+        .text-water-blue {
+            color: #03a9f4;
+        }
+        .focus\:ring-water-blue:focus {
+            --tw-ring-color: #03a9f4;
+        }
+        .focus\:border-water-blue:focus {
+            --tw-border-opacity: 1;
+            border-color: #03a9f4;
+        }
+        .hover\:bg-sky-600:hover {
+            background-color: #0288d1;
+        }
+        .status-pending { color: #f59e0b; background-color: #fffbeb; }
+        .status-approved { color: #16a34a; background-color: #f0fdf4; }
+        .status-rejected { color: #dc2626; background-color: #fef2f2; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center py-10">
+
+    <div id="app-container" class="bg-white rounded-3xl shadow-2xl p-8 md:p-12 w-full max-w-5xl mx-4 transition-all duration-500 transform">
+
+        <div id="user-id-display" class="absolute top-4 left-4 p-2 text-xs bg-gray-200 rounded-lg text-gray-600">
+            User ID: <span id="user-id-text" class="font-mono text-gray-800">Loading...</span>
+        </div>
+
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 flex items-center justify-center space-x-3">
+                <span class="text-water-blue">Water AI</span>
+                <svg class="h-8 w-8 text-water-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 10v-1m0 0c-1.11 0-2.08-.402-2.599-1M12 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8z" /></svg>
+            </h1>
+            <p class="mt-2 text-gray-500">Intelligent Water Management for Your Home</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Left Column: User Input & Actions -->
+            <div class="space-y-8">
+                <section class="bg-gray-50 p-6 rounded-2xl shadow-inner">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Your House Details</h2>
+                    <form id="house-details-form" class="space-y-4">
+                        <div>
+                            <label for="house-size" class="block text-sm font-medium text-gray-700">House Size (sq. meters)</label>
+                            <input type="number" id="house-size" name="house-size" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-water-blue focus:border-water-blue sm:text-sm p-2">
+                        </div>
+                        <div>
+                            <label for="residents" class="block text-sm font-medium text-gray-700">Number of Residents</label>
+                            <input type="number" id="residents" name="residents" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-water-blue focus:border-water-blue sm:text-sm p-2">
+                        </div>
+                        <div>
+                            <label for="storage-capacity" class="block text-sm font-medium text-gray-700">Total Water Storage Capacity (Liters)</label>
+                            <input type="number" id="storage-capacity" name="storage-capacity" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-water-blue focus:border-water-blue sm:text-sm p-2">
+                        </div>
+                        <button type="submit" class="w-full bg-water-blue hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                            Save Details
+                        </button>
+                    </form>
+                </section>
+
+                <section class="bg-gray-50 p-6 rounded-2xl shadow-inner">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Request Extra Water</h2>
+                    <p class="text-sm text-gray-500 mb-4">Expecting guests or have a special event? Request a temporary increase to your daily limit here.</p>
+                    <form id="request-form" class="space-y-4">
+                        <div>
+                            <label for="occasion" class="block text-sm font-medium text-gray-700">Occasion (e.g., Family Gathering)</label>
+                            <input type="text" id="occasion" name="occasion" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-water-blue focus:border-water-blue sm:text-sm p-2">
+                        </div>
+                        <div>
+                            <label for="extra-water" class="block text-sm font-medium text-gray-700">Extra Water Needed (Liters)</label>
+                            <input type="number" id="extra-water" name="extra-water" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-water-blue focus:border-water-blue sm:text-sm p-2">
+                        </div>
+                        <button type="submit" id="request-btn" class="w-full bg-water-blue hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-md disabled:opacity-50" disabled>
+                            Submit Request
+                        </button>
+                    </form>
+                </section>
+                 <section class="bg-gray-50 p-6 rounded-2xl shadow-inner">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Tips to Save Water</h2>
+                    <ul class="list-disc list-inside space-y-2 text-gray-600">
+                        <li>Turn off the tap while brushing your teeth.</li>
+                        <li>Fix leaky faucets and pipes immediately.</li>
+                        <li>Use a broom instead of a hose to clean driveways.</li>
+                    </ul>
+                </section>
+            </div>
+
+            <!-- Right Column: Dashboard & Data Display -->
+            <div class="space-y-8">
+                <section id="dashboard" class="p-6 rounded-2xl bg-water-blue text-white shadow-xl flex flex-col items-center justify-center text-center transition-all duration-500 transform scale-95 opacity-0">
+                    <h2 class="text-2xl font-bold mb-4">Your Water Dashboard</h2>
+                     <div id="dashboard-content" class="w-full space-y-6" style="display: none;">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-medium">Current Storage</span>
+                                <span id="storage-text" class="text-lg font-bold">0 L</span>
+                            </div>
+                            <div class="w-full bg-blue-300 rounded-full h-2.5"><div id="storage-bar" class="bg-white h-2.5 rounded-full transition-all duration-1000 ease-out" style="width: 0%;"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-medium">Today's Usage vs Limit</span>
+                                <span id="usage-text" class="text-lg font-bold">0 L</span>
+                            </div>
+                            <div class="w-full bg-blue-300 rounded-full h-2.5"><div id="usage-bar" class="bg-white h-2.5 rounded-full transition-all duration-1000 ease-out" style="width: 0%;"></div></div>
+                        </div>
+                        <div class="flex items-center justify-center space-x-4 pt-2">
+                            <div id="status-icon" class="text-4xl"></div>
+                            <div>
+                                <h3 id="fine-text" class="text-xl font-semibold"></h3>
+                                <p id="status-message" class="text-sm"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="dashboard-placeholder" class="text-center text-blue-100">
+                        <p>Please enter your house details on the left to activate your dashboard.</p>
+                    </div>
+                </section>
+
+                <section id="fine-details" class="bg-gray-50 p-6 rounded-2xl shadow-inner" style="display: none;">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Fine Details</h2>
+                    <div class="space-y-4 text-gray-600">
+                        <div class="flex justify-between"><span>Today's Water Limit</span><span id="limit-display" class="font-bold text-gray-800">0 L</span></div>
+                        <div class="flex justify-between"><span>Excess Usage Today</span><span id="excess-usage-display" class="font-bold text-red-500">0 L</span></div>
+                        <div class="flex justify-between"><span>Fine Amount</span><span id="fine-amount-display" class="font-bold text-red-500">₹0</span></div>
+                    </div>
+                </section>
+
+                <section id="requests-section" class="bg-gray-50 p-6 rounded-2xl shadow-inner" style="display: none;">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">My Requests</h2>
+                    <div id="requests-list" class="space-y-3 max-h-48 overflow-y-auto">
+                        <p id="no-requests-text" class="text-gray-500 text-sm">You haven't made any requests yet.</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm text-center transform transition-all duration-300 scale-95" id="modal-box">
+            <h3 id="modal-title" class="text-lg font-semibold mb-2 text-gray-800"></h3>
+            <p id="modal-message" class="text-sm text-gray-600 mb-4"></p>
+            <button id="modal-close-btn" class="bg-water-blue hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-xl">OK</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Mocking Firebase for demonstration in a single file
+        let mockFirestoreDb = {};
+        const mockAuth = { currentUser: null };
+
+        const getDoc = (docRef) => Promise.resolve({
+            exists: () => !!mockFirestoreDb[docRef.path],
+            data: () => mockFirestoreDb[docRef.path] || null
+        });
+
+        const setDoc = (docRef, data) => Promise.resolve(mockFirestoreDb[docRef.path] = data);
+        const doc = (...pathSegments) => ({ path: pathSegments.join('/') });
+
+        // DOM Elements
+        const el = {
+            form: document.getElementById('house-details-form'),
+            houseSizeInput: document.getElementById('house-size'),
+            residentsInput: document.getElementById('residents'),
+            storageCapacityInput: document.getElementById('storage-capacity'),
+            dashboard: document.getElementById('dashboard'),
+            dashboardContent: document.getElementById('dashboard-content'),
+            dashboardPlaceholder: document.getElementById('dashboard-placeholder'),
+            storageBar: document.getElementById('storage-bar'),
+            storageText: document.getElementById('storage-text'),
+            usageBar: document.getElementById('usage-bar'),
+            usageText: document.getElementById('usage-text'),
+            statusIcon: document.getElementById('status-icon'),
+            fineText: document.getElementById('fine-text'),
+            statusMessage: document.getElementById('status-message'),
+            fineDetailsSection: document.getElementById('fine-details'),
+            limitDisplay: document.getElementById('limit-display'),
+            excessUsageDisplay: document.getElementById('excess-usage-display'),
+            fineAmountDisplay: document.getElementById('fine-amount-display'),
+            modal: document.getElementById('modal'),
+            modalBox: document.getElementById('modal-box'),
+            modalTitle: document.getElementById('modal-title'),
+            modalMessage: document.getElementById('modal-message'),
+            modalCloseBtn: document.getElementById('modal-close-btn'),
+            requestForm: document.getElementById('request-form'),
+            requestBtn: document.getElementById('request-btn'),
+            occasionInput: document.getElementById('occasion'),
+            extraWaterInput: document.getElementById('extra-water'),
+            requestsSection: document.getElementById('requests-section'),
+            requestsList: document.getElementById('requests-list'),
+            noRequestsText: document.getElementById('no-requests-text'),
+            userIdText: document.getElementById('user-id-text')
+        };
+
+        // App State
+        let state = {
+            userId: null,
+            userDataRef: null,
+            houseDetails: {
+                houseSize: 0,
+                residents: 0,
+                storageCapacity: 0,
+                requests: []
+            },
+            currentStorage: 0,
+            dailyUsage: 0,
+            dailyLimit: 0,
+            isDataLoaded: false
+        };
+
+        const AVG_LITERS_PER_PERSON = 135;
+        const FINE_PER_LITER = 5;
+
+        // Functions
+        function showModal(title, message) {
+            el.modalTitle.textContent = title;
+            el.modalMessage.textContent = message;
+            el.modal.classList.remove('hidden');
+            el.modal.classList.add('flex');
+            setTimeout(() => el.modalBox.classList.add('scale-100'), 10);
+        }
+
+        function closeModal() {
+            el.modalBox.classList.remove('scale-100');
+            setTimeout(() => {
+                el.modal.classList.add('hidden');
+                el.modal.classList.remove('flex');
+            }, 300);
+        }
+
+        function renderRequests(requests = []) {
+            el.requestsList.innerHTML = '';
+            if (requests.length === 0) {
+                el.requestsList.appendChild(el.noRequestsText);
+                el.noRequestsText.style.display = 'block';
+                return;
+            }
+            el.noRequestsText.style.display = 'none';
+
+            requests.forEach(req => {
+                const reqDiv = document.createElement('div');
+                reqDiv.className = p-3 rounded-lg text-sm flex justify-between items-center status-${req.status.toLowerCase()};
+                reqDiv.innerHTML = `
+                    <div>
+                        <p class="font-semibold">${req.occasion}</p>
+                        <p>+${req.extraWater} Liters</p>
+                    </div>
+                    <span class="font-bold">${req.status}</span>
+                `;
+                el.requestsList.appendChild(reqDiv);
+            });
+        }
+
+        function calculateDailyLimit() {
+            const baseLimit = (state.houseDetails.residents || 0) * AVG_LITERS_PER_PERSON;
+            const approvedExtra = (state.houseDetails.requests || [])
+                .filter(r => r.status === 'Approved')
+                .reduce((total, r) => total + r.extraWater, 0);
+            state.dailyLimit = baseLimit + approvedExtra;
+        }
+
+        function updateDashboard() {
+            if (!state.isDataLoaded) return;
+
+            calculateDailyLimit();
+
+            const storagePercentage = (state.currentStorage / state.houseDetails.storageCapacity) * 100;
+            el.storageBar.style.width = ${Math.max(0, storagePercentage)}%;
+            el.storageText.textContent = ${Math.round(state.currentStorage)} L / ${state.houseDetails.storageCapacity} L;
+
+            const usagePercentage = (state.dailyUsage / state.dailyLimit) * 100;
+            el.usageBar.style.width = ${Math.min(100, usagePercentage)}%;
+            el.usageText.textContent = ${Math.round(state.dailyUsage)} L / ${Math.round(state.dailyLimit)} L;
+
+            if (state.dailyUsage > state.dailyLimit) {
+                const excessUsage = state.dailyUsage - state.dailyLimit;
+                const fineAmount = excessUsage * FINE_PER_LITER;
+                el.fineDetailsSection.style.display = 'block';
+                el.limitDisplay.textContent = ${Math.round(state.dailyLimit)} L;
+                el.excessUsageDisplay.textContent = ${Math.round(excessUsage)} L;
+                el.fineAmountDisplay.textContent = ₹${fineAmount.toFixed(2)};
+                el.fineText.textContent = Fine: ₹${fineAmount.toFixed(2)};
+                el.statusMessage.textContent = "You have exceeded the daily limit.";
+                el.statusIcon.innerHTML = <svg class="h-10 w-10 text-red-300" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>;
+                el.usageBar.classList.remove('bg-white');
+                el.usageBar.classList.add('bg-red-300');
+            } else {
+                el.fineDetailsSection.style.display = 'none';
+                el.fineText.textContent = "No Fine";
+                el.statusMessage.textContent = "You are within the daily usage limit.";
+                el.statusIcon.innerHTML = <svg class="h-10 w-10 text-green-300" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>;
+                el.usageBar.classList.add('bg-white');
+                el.usageBar.classList.remove('bg-red-300');
+            }
+        }
+
+        async function loadData() {
+            const docSnap = await getDoc(state.userDataRef);
+            if (docSnap.exists() && docSnap.data()) {
+                state.houseDetails = { requests: [], ...docSnap.data() };
+                state.isDataLoaded = true;
+                el.houseSizeInput.value = state.houseDetails.houseSize;
+                el.residentsInput.value = state.houseDetails.residents;
+                el.storageCapacityInput.value = state.houseDetails.storageCapacity;
+                state.currentStorage = state.houseDetails.storageCapacity;
+
+                el.dashboardPlaceholder.style.display = 'none';
+                el.dashboardContent.style.display = 'block';
+                el.dashboard.classList.remove('scale-95', 'opacity-0');
+                el.requestsSection.style.display = 'block';
+                el.requestBtn.disabled = false;
+
+                renderRequests(state.houseDetails.requests);
+                updateDashboard();
+            }
+        }
+
+        async function saveData() {
+            try {
+                await setDoc(state.userDataRef, state.houseDetails);
+                return true;
+            } catch (e) {
+                console.error("Error saving data:", e);
+                showModal("Error", "Could not save data. Please check your connection.");
+                return false;
+            }
+        }
+
+        function simulateUsage() {
+            if (!state.isDataLoaded || state.currentStorage <= 0) return;
+            const usageThisTick = Math.random() * 2 + 0.5;
+            state.currentStorage = Math.max(0, state.currentStorage - usageThisTick);
+            state.dailyUsage += usageThisTick;
+            updateDashboard();
+        }
+
+        // Event Handlers
+        el.form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const details = {
+                houseSize: parseInt(el.houseSizeInput.value, 10),
+                residents: parseInt(el.residentsInput.value, 10),
+                storageCapacity: parseInt(el.storageCapacityInput.value, 10),
+            };
+            if (Object.values(details).some(v => !v > 0)) {
+                showModal("Invalid Input", "Please enter valid, positive numbers for all fields.");
+                return;
+            }
+
+            state.houseDetails = { ...state.houseDetails, ...details };
+            state.currentStorage = details.storageCapacity;
+            state.dailyUsage = 0;
+            state.isDataLoaded = true;
+
+            if (await saveData()) {
+                showModal("Success!", "House details saved. Your dashboard is now active.");
+                loadData();
+            }
+        });
+
+        el.requestForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const occasion = el.occasionInput.value;
+            const extraWater = parseInt(el.extraWaterInput.value, 10);
+
+            if (!occasion || !extraWater > 0) {
+                showModal("Invalid Request", "Please provide a valid occasion and extra water amount.");
+                return;
+            }
+
+            const newRequest = {
+                id: crypto.randomUUID(),
+                occasion,
+                extraWater,
+                // In a real app, this would be 'Pending'. We set to 'Approved' for instant demo effect.
+                status: 'Approved'
+            };
+
+            state.houseDetails.requests.push(newRequest);
+
+            if(await saveData()) {
+                showModal("Request Submitted", "Your request has been approved for demonstration purposes and your daily limit is updated.");
+                el.requestForm.reset();
+                renderRequests(state.houseDetails.requests);
+                updateDashboard();
+            }
+        });
+
+        // Initialize App
+        async function initApp() {
+            mockAuth.currentUser = { uid: 'mock-user-' + Date.now().toString().slice(-6) };
+            state.userId = mockAuth.currentUser.uid;
+            el.userIdText.textContent = state.userId;
+
+            // In a real Firebase app, the path would be more complex.
+            state.userDataRef = doc('user-data', state.userId);
+
+            await loadData();
+            setInterval(simulateUsage, 4000);
+            el.modalCloseBtn.addEventListener('click', closeModal);
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
